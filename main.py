@@ -70,7 +70,6 @@ def train():
     print("Finished loading data")
 
 
-    # Add channel dimension to the inp
     X_train, X_test, y_train, y_test = train_test_split(
         images,
         labels,
@@ -109,8 +108,6 @@ def predict():
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     grayscale_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #_, binary_image = cv2.threshold(grayscale_image, 85, 255, cv2.THRESH_BINARY)
-
     # Adaptive thresholding
     normalized_image = cv2.adaptiveThreshold(grayscale_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
                                              15, 4)
