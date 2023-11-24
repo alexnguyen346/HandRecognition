@@ -5,13 +5,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random as rn
 import tensorflow as tf
+import keras
 from tensorflow.keras import layers
 from tensorflow.keras.optimizers import RMSprop
 from sklearn.model_selection import train_test_split
 import json
+import time
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
 
 def train():
     # Dictionary of index and respective classes
@@ -105,26 +106,14 @@ def train():
     # Save model
     model.save("trainedmodel.h5")
 
+cap = cv2.VideoCapture(0)
 
-def predict():
-    # Load the dictionary
-    with open("reverselookup.json", "r") as file:
-        reverselookup = json.load(file)
-
-    # Load the trained model
-    loaded_model = tf.keras.models.load_model("trainedmodel.h5")
-    loaded_model.summary()
-    images = []
-    img_path = os.path.join('./testImages/test04.jpg')
-    img = cv2.imread(img_path)
-    cv2.imshow('Image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+def predict(img, loaded_model):
     # Binary image with some adjustments to take account of contrast intensities
     grayscale_image = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     # Adaptive thresholding
     normalized_image = cv2.adaptiveThreshold(grayscale_image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY,
-                                             15, 4)
+                                            15, 4)
     # Histogram equalization
     normalized_image = cv2.equalizeHist(normalized_image)
 
@@ -136,21 +125,45 @@ def predict():
     # Resize and normalize
     resized_image = cv2.resize(normalized_image, (200, 200))
     img = resized_image / 255.0
-    cv2.imshow('Image', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
-    images.append(img)
-    images = np.array(images, dtype='float32')
+    img = np.reshape(img, (1, 200, 200, 1))
 
     # Prediction
-    prediction = loaded_model.predict(images)
+    prediction = loaded_model.predict(img)
     predicted_label_index = np.argmax(prediction)
     predicted_label = reverselookup[str(predicted_label_index)]
-    print(predicted_label)
-
+    return predicted_label, normalized_image
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    predict()
+    # Load the dictionary
+    with open("reverselookup.json", "r") as file:
+        reverselookup = json.load(file)
+
+    # Load the trained model
+    loaded_model = tf.keras.models.load_model("trainedmodel.h5")
+    loaded_model.summary()
+
+    while cap.isOpened():
+        # Read a frame from the camera
+        ret, frame = cap.read()
+        if not ret:
+            break
+        # Convert the BGR image to RGB
+        img = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Display the gesture label on the webcam window
+        predicted_label, bg_img = predict(img, loaded_model)
+
+        cv2.putText(frame, f'Gesture: {predicted_label}', (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        
+        # Display the frame
+        cv2.imshow('Hand Gesture Recognition', frame)
+
+        # Break the loop if 'q' is pressed
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    # Release the camera and close the OpenCV window
+    cap.release()
+    cv2.destroyAllWindows()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
